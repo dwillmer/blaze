@@ -2,55 +2,77 @@
 Overview
 ========
 
-Blaze is a Generalization of NumPy
-----------------------------------
+Blaze Abstracts Computation and Storage
+---------------------------------------
 
 .. image:: svg/numpy_plus.png
     :align: center
 
-We would like Blaze to be a generalization of NumPy.  Whether this means
-that the Array and Table objects replace NumPy arrays in the future
-has yet to be determined.  For now, it will augment NumPy and provide
-interoperability whenever possible.
 
-Datashape
-~~~~~~~~~
+Several projects provide rich and performant data analytics.  Competition
+between these projects gives rise to a vibrant and dynamic ecosystem.
+Blaze augments this ecosystem with a uniform and adaptable interface.  Blaze
+orchestrates computation and data access among these external projects.  It
+provides a consistent backdrop to build standard interfaces usable by the
+current Python community.
 
-The type system in Blaze is called Datashape, and generalizes the
-combination of shape and dtype in NumPy. The datashape of an array
-consists of a number of dimensions, followed by an element type.
 
-Data Descriptor
-~~~~~~~~~~~~~~~
+Demonstration
+-------------
 
-The data descriptor is the interface which exposes multi-dimensional
-data to Blaze. It provides data layout, iteration and indexing
-of data, no mathematical operations. This is similar to the Python
-memoryview object, but with a more general multi-dimensional structure.
-The data descriptor is for interfacing to data in any of local memory,
-out of core storage, or distributed storage.
+Blaze separates the computations that we want to perform:
 
-Array
-~~~~~
+.. code-block:: python
 
-The array object wraps a data descriptor, adding arithmetic, field
-access, and other properties to be the main array programming object
-in Blaze. Most algorithms will be written in terms of arrays.
+   >>> from blaze import *
+   >>> accounts = Symbol('accounts', 'var * {id: int, name: string, amount: int}')
 
-Table
-~~~~~
+   >>> deadbeats = accounts[accounts.amount < 0].name
 
-The table object wraps a number of named data descriptors, representing
-an array of records with a field-oriented storage. It provides data-oriented
-access via various queries and selections.
+From the representation of data
 
-Blaze Functions
-~~~~~~~~~~~~~~~
+.. code-block:: python
 
-Blaze functions provide a way to define functions which operate on
-elements or subarrays of blaze arrays. Evaluation is deferred until
-the blaze.eval function is called on the result.
+   >>> L = [[1, 'Alice',   100],
+   ...      [2, 'Bob',    -200],
+   ...      [3, 'Charlie', 300],
+   ...      [4, 'Denis',   400],
+   ...      [5, 'Edith',  -500]]
 
-Blaze functions provide multiple dispatch into a table of kernels,
-which may be parameterized and use runtime code generation.
+Blaze enables users to solve data-oriented problems
 
+.. code-block:: python
+
+   >>> list(compute(deadbeats, L))
+   ['Bob', 'Edith']
+
+But the separation of expression from data allows us to switch between
+different backends.
+
+Here we solve the same problem using Pandas instead of Pure Python.
+
+.. code-block:: python
+
+   >>> df = DataFrame(L, columns=['id', 'name', 'amount'])
+
+   >>> compute(deadbeats, df)
+   1      Bob
+   4    Edith
+   Name: name, dtype: object
+
+Blaze doesn't compute these results, Blaze intelligently drives other projects
+to compute them instead.  These projects range from simple Pure Python
+iterators to powerful distributed Spark clusters.  Blaze is built to be
+extended to new systems as they evolve.
+
+Scope
+-----
+
+Blaze speaks Python and Pandas as seen above and also several other
+technologies, including NumPy, SQL, Mongo, Spark, PyTables, etc..  Blaze is
+built to make connecting to a new technology easy.
+
+Blaze currently targets database and array technologies used for analytic
+queries.  It strives to orchestrate and provide interfaces on top of and in
+between other computational systems.  We provide performance by providing data
+scientists with intuitive access to a variety of tools.

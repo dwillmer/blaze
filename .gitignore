@@ -6,6 +6,8 @@
 *.swo
 *.pyd
 build
-blaze/blz/blz_ext.c
-blaze/datashape/dyacc.py
-blaze/datashape/dlex.py
+dist
+blaze.egg-info
+
+
+__conda_version__.txt

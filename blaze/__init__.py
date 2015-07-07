@@ -1,95 +1,80 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
-# build the blaze namespace with selected functions
+try:
+    import h5py  # if we import h5py after tables we segfault
+except ImportError:
+    pass
 
-from . import datashape, ckernel
-from .datashape import dshape
-from .array import Array
-from .constructors import array, empty, ones, zeros
-from .eval import eval, append
-from .storage import open, drop, Storage
-import ctypes
+from pandas import DataFrame
+from odo import odo, convert, append, resource, drop
+from odo.backends.csv import CSV
+from odo.backends.json import JSON, JSONLines
 
-# These are so that llvm_structs corresponding to dshapes get converted correctly
-#  when constructing ctypes functions
-# FIXME:  They should probably go into a different module.
-#   See blaze_kernels.py in _get_ctypes() method
-class complex128(ctypes.Structure):
-    _fields_ = [('real', ctypes.c_double),
-                ('imag', ctypes.c_double)]
-    _blaze_type_ = datashape.complex128
+from multipledispatch import halt_ordering, restart_ordering
 
-class complex64(ctypes.Structure):
-    _fields_ = [('real', ctypes.c_float),
-                ('imag', ctypes.c_float)]
-    _blaze_type_ = datashape.complex64
+halt_ordering()  # Turn off multipledispatch ordering
 
-__version__ = '0.0.1'
+from datashape import dshape, discover
+from .utils import ignoring
+from .expr import (Symbol, TableSymbol, symbol, ndim, shape)
+from .expr import (by, count, count_values, distinct, head, join, label, like,
+        mean, merge, nunique, relabel, selection, sort, summary, var,
+        transform)
+from .expr import (date, datetime, day, hour, microsecond, millisecond, month,
+        second, time, year)
+from .expr.arrays import (tensordot, transpose)
+from .expr.functions import *
+from .index import create_index
+from .interactive import *
+from .compute.pmap import set_default_pmap
+from .compute.csv import *
+from .compute.json import *
+from .compute.python import *
+from .compute.pandas import *
+from .compute.numpy import *
+from .compute.core import *
+from .compute.core import compute
+from .cached import CachedDataset
 
-def print_versions():
-    """Print all the versions of software that Blaze relies on."""
-    import sys, platform
-    import numpy as np
-    import dynd
-    from . import blz
-    print("-=" * 38)
-    print("Blaze version: %s" % __version__)
-    print("NumPy version: %s" % np.__version__)
-    print("DyND version: %s / LibDyND %s" %
-                    (dynd.__version__, dynd.__libdynd_version__))
-    print("BLZ version: %s" % blz.__version__)
-    print("Blosc version: %s (%s)" % blz.blosc_version())
-    print("Python version: %s" % sys.version)
-    (sysname, nodename, release, version, machine, processor) = \
-        platform.uname()
-    print("Platform: %s-%s-%s (%s)" % (sysname, release, machine, version))
-    if sysname == "Linux":
-        print("Linux dist: %s" % " ".join(platform.linux_distribution()[:-1]))
-    if not processor:
-        processor = "not recognized"
-    print("Processor: %s" % processor)
-    print("Byte-ordering: %s" % sys.byteorder)
-    print("Detected cores: %s" % blz.detect_number_of_cores())
-    print("-=" * 38)
+with ignoring(ImportError):
+    from .server import *
+with ignoring(ImportError):
+    from .sql import *
+    from .compute.sql import *
+with ignoring(ImportError):
+    from .compute.dask import *
+with ignoring(ImportError, AttributeError):
+    from .compute.spark import *
+with ignoring(ImportError, TypeError):
+    from .compute.sparksql import *
+with ignoring(ImportError):
+    from dynd import nd
+    from .compute.dynd import *
+with ignoring(ImportError):
+    from .compute.h5py import *
+with ignoring(ImportError):
+    from .compute.hdfstore import *
+with ignoring(ImportError):
+    from .compute.pytables import *
+with ignoring(ImportError):
+    from .compute.chunks import *
+with ignoring(ImportError):
+    from .compute.bcolz import *
+with ignoring(ImportError):
+    from .mongo import *
+    from .compute.mongo import *
+with ignoring(ImportError):
+    from .pytables import *
+    from .compute.pytables import *
 
 
-def test(verbosity=1, xunitfile=None, exit=False):
-    """
-    Runs the full Blaze test suite, outputting
-    the results of the tests to sys.stdout.
+from .expr import concat  # Some module re-export toolz.concat and * catches it.
 
-    This uses nose tests to discover which tests to
-    run, and runs tests in any 'tests' subdirectory
-    within the Blaze module.
+restart_ordering()  # Restart multipledispatch ordering and do ordering
 
-    Parameters
-    ----------
-        Value 0 prints very little, 1 prints a little bit,
-        and 2 prints the test names while testing.
-    xunitfile : string, optional
-        If provided, writes the test results to an xunit
-        style xml file. This is useful for running the tests
-        in a CI server such as Jenkins.
-    exit : bool, optional
-        If True, the function will call sys.exit with an
-        error code after the tests are finished.
-    """
-    import nose
-    import os
-    import sys
-    argv = ['nosetests', '--verbosity=%d' % verbosity]
-    # Output an xunit file if requested
-    if xunitfile:
-        argv.extend(['--with-xunit', '--xunit-file=%s' % xunitfile])
-    # Add all 'tests' subdirectories to the options
-    rootdir = os.path.dirname(__file__)
-    for root, dirs, files in os.walk(rootdir):
-        if 'tests' in dirs:
-            testsdir = os.path.join(root, 'tests')
-            argv.append(testsdir)
-            print('Test dir: %s' % testsdir[len(rootdir)+1:])
-    # print versions (handy when reporting problems)
-    print_versions()
-    sys.stdout.flush()
-    # Ask nose to do its thing
-    return nose.main(argv=argv, exit=exit)
+inf = float('inf')
+nan = float('nan')
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
